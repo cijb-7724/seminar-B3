@@ -43,4 +43,5 @@ public:
 
 double distance(Point p1,Point p2);
 vector<Point> load(string filename);
+
 #endif

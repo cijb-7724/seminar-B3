@@ -14,7 +14,7 @@ void Stl::load(string filename){
    string tmp;
    getline(ifs,tmp);//solid #####
    rename(tmp.substr(6));//#####
-   vector<Point> facets;//ƒtƒ@ƒCƒ‹ˆê“Ç‚İ‚İæ
+   vector<Point> facets;//ãƒ•ã‚¡ã‚¤ãƒ«ä¸€æ™‚èª­ã¿è¾¼ã¿å…ˆ
 
    while (getline(ifs,tmp)){// faset normal xx yy zz
       if (tmp==("endsolid "+name)){
@@ -30,20 +30,20 @@ void Stl::load(string filename){
       getline(ifs,tmp);//endfaset
    }
 
-   //set‚É“ü‚ê‚é‚±‚Æ‚Åd•¡íœ
+   //setã«å…¥ã‚Œã‚‹ã“ã¨ã§é‡è¤‡å‰Šé™¤
    set<Point> cod;
    for (auto i : facets){
       cod.insert(i);
    }
 
-   //p‚Ì\’z
+   //pã®æ§‹ç¯‰
    p.resize(cod.size());
    for (int i=0;!cod.empty();i++){
       p[i]=*begin(cod);
       cod.erase(p[i]);
    }
 
-   //relate‚Ì\’z
+   //relateã®æ§‹ç¯‰
    relate.resize(p.size());
    for (int i=0;i<relate.size();i++){
       relate[i]={0,0,0};
@@ -64,7 +64,7 @@ void Stl::export(string filename){
    ofstream ofs(filename);
    ofs << "solid " << name << endl;
    for (int i=0;i<relate.size();i++){
-      ofs << "faset normal " << endl;//‚±‚±’Ç‹L•K{BŠy‚ÈÀ‘•‚ğl‚¦‚é
+      ofs << "faset normal " << endl;//ã“ã“è¿½è¨˜å¿…é ˆã€‚æ¥½ãªå®Ÿè£…ã‚’è€ƒãˆã‚‹
       ofs << "\touter loop" << endl;
       // for (int j=0;j<3;j++){
       //    ofs << "\t\tvertex " << p[relate[i][j]].x << ' ' << p[relate[i][j]].y << ' ' << p[relate[i][j]].z << endl;
@@ -76,7 +76,7 @@ void Stl::export(string filename){
    ofs << "endsolid " << name << endl;
 }
 
-// STLƒtƒ@ƒCƒ‹“à‚Ì–¼‘O‚Ìİ’è
+// STLãƒ•ã‚¡ã‚¤ãƒ«å†…ã®åå‰ã®è¨­å®š
 void Stl::rename(string s){
    name=s;
 }

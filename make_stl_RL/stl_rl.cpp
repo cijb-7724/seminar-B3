@@ -2,15 +2,11 @@
 強化学習を用いて、点群のデータからSTLデータを整形する
 */
 #include "Point.hpp"
-#include <iostream>
-#include <vector>
-#include <string>
-#include <fstream>
-using namespace std;
+#include "Point.cpp"
 
 
 int main(){
-   vector<Point> dots=load("squere.csv");
+   vector<Point> dots=load("Data/square.csv");
 
    //点群の各軸方向の範囲
    vector<pair<double,double>> range(3);
@@ -25,13 +21,12 @@ int main(){
       range[2].first=min(range[2].first,d.z);
       range[2].second=max(range[2].second,d.z);
    }
-   /*
    cout << "x軸方向の最小 : " << range[0].first << endl;
    cout << "x軸方向の最大 : " << range[0].second << endl;
    cout << "y軸方向の最小 : " << range[1].first << endl;
    cout << "y軸方向の最大 : " << range[1].second << endl;
    cout << "z軸方向の最小 : " << range[2].first << endl;
    cout << "z軸方向の最大 : " << range[2].second << endl;
-   */
+   
 
 }
