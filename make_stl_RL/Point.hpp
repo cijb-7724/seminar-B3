@@ -3,9 +3,13 @@
 */
 #ifndef POINT
 #define POINT
+#include <iostream>
 #include <cmath>
 #include <vector>
 #include <string>
+#include <fstream>
+
+using namespace std;
 
 vector<string> split(string s,string delimiter);
 

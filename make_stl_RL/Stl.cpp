@@ -1,5 +1,4 @@
 #include "Stl.hpp"
-using namespace std;
 
 Stl::Stl(){
    ;//DO NOTHING
@@ -48,10 +47,16 @@ void Stl::load(string filename){
    relate.resize(p.size());
    for (int i=0;i<relate.size();i++){
       relate[i]={0,0,0};
-      for (int j=0;j<3;j++){
-         auto pos=lower_bound(p.begin(),p.end(),facets[3*i+j]);
-         relate[i][j]=distance(p.begin(),pos);
-      }
+      // for (int j=0;j<3;j++){
+      //    auto pos=lower_bound(p.begin(),p.end(),facets[3*i+j]);
+      //    relate[i][j]=distance(p.begin(),pos);
+      // }
+      auto pos = lower_bound(p.begin(), p.end(), facets[3*i+0]);
+      get<0>(relate[i]) = distance(p.begin(), pos);
+      pos = lower_bound(p.begin(), p.end(), facets[3*i+1]);
+      get<1>(relate[i]) = distance(p.begin(), pos);
+      pos = lower_bound(p.begin(), p.end(), facets[3*i+2]);
+      get<2>(relate[i]) = distance(p.begin(), pos);
    }
 }
 
@@ -61,9 +66,10 @@ void Stl::export(string filename){
    for (int i=0;i<relate.size();i++){
       ofs << "faset normal " << endl;//ここ追記必須。楽な実装を考える
       ofs << "\touter loop" << endl;
-      for (int j=0;j<3;j++){
-         ofs << "\t\tvertex " << p[relate[i][j]].x << ' ' << p[relate[i][j]].y << ' ' << p[relate[i][j]].z << endl;
-      }
+      // for (int j=0;j<3;j++){
+      //    ofs << "\t\tvertex " << p[relate[i][j]].x << ' ' << p[relate[i][j]].y << ' ' << p[relate[i][j]].z << endl;
+      // }
+      ofs << "\t\tvertex " << p[get<0>(relate[i])].x << ' ' << p[get<0>(relate[i])].y << ' ' << p[get<0>(relate[i])].z << endl;
       ofs << "\tendloop" << endl;
       ofs << "endfaset" << endl;
    }

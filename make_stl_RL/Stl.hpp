@@ -30,6 +30,7 @@ public:
    Stl();
    void load(string filename);
    void rename(string s);
+   void export(string filename);
 };
 
 #endif
