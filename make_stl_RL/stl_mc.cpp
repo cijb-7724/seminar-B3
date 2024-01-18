@@ -18,9 +18,14 @@ using namespace std;
 
 #define tp() cout << "here~~" << endl
 
-
+using vi = vector<int>;
 using vd = vector<double>;
+using vvi = vector<vector<int>>;
 using vvd = vector<vector<double>>;
+using vvvi = vector<vector<vector<int>>>;
+using vvvd = vector<vector<vector<double>>>;
+
+
 
 
 //generate random 
@@ -90,8 +95,10 @@ public:
     vector<int> direction;
     map<int, string> direction_mean;
     vector<vector<int>> action_space;
-    map<int, string> action_meaning;
-    vector<vector<double>> reward_map;
+    // vector<vector<double>> reward_map;
+    vvvi environment;
+    map<vvvi, double> reward_map;
+    
     pair<int, int> goal_state, wall_state, start_state, agent_state;
 public:
     GridWorld();
@@ -111,9 +118,8 @@ GridWorld::GridWorld() {
     this->direction = {0, 1, 2, 3, 4, 5};
     this->direction_mean = {{0, "UP"}, {1, "DOWN"}, {2, "LEFT"}, {3, "RIGHT"}, {4, "FRONT"}, {5, "BACK"}};
     for (int i=0; i<vertices; ++i) this->action_space.push_back(direction);
+    this->environment.assign(3, vvi(3, vi(3, -1)));
     
-    // this->action_space = {0, 1, 2, 3};
-    this->action_meaning = {{0, "UP"}, {1, "DOWN"}, {2, "LEFT"}, {3, "RIGHT"}};
     reward_map = {
         {0, 0, 0, 1.0},
         {0, 0, 0, -1.0},
@@ -144,6 +150,19 @@ vector<pair<int, int>> GridWorld::states(void) {
         }
     }
     return vec;
+}
+/*
+{
+    {{0, 0, 0}, {0, 0, 1}, {0, 0, 2}, {1, 0, 0}, {1, 0, 1}, {1, 0, 2}, {1, 1, 0}, {1, 1, 1}},
+    ...
+    {{2, 0, 1}, {2, 0, 2}, {2, 1, 0}, {2, 1, 1}, {2, 1, 2}, {2, 2, 0}, {2, 2, 1}, {2, 2, 2}}
+}
+*/
+vvvi GridWorld::stats(void) {
+    vvvi vec;
+    for (int i=0; i<this->vertices; ++i) {
+
+    }
 }
 pair<int, int> GridWorld::next_state(pair<int, int> state, int action) {
     vector<pair<int, int>> action_move_map = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
