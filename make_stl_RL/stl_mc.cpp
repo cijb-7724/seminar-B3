@@ -86,7 +86,10 @@ Point型に対して，そこにagentの頂点があったら頂点番号，な�
 */
 class GridWorld {
 public:
-    vector<int> action_space;
+    int vertices;
+    vector<int> direction;
+    map<int, string> direction_mean;
+    vector<vector<int>> action_space;
     map<int, string> action_meaning;
     vector<vector<double>> reward_map;
     pair<int, int> goal_state, wall_state, start_state, agent_state;
@@ -104,7 +107,12 @@ public:
 };
 
 GridWorld::GridWorld() {
-    this->action_space = {0, 1, 2, 3};
+    this->vertices = 8;
+    this->direction = {0, 1, 2, 3, 4, 5};
+    this->direction_mean = {{0, "UP"}, {1, "DOWN"}, {2, "LEFT"}, {3, "RIGHT"}, {4, "FRONT"}, {5, "BACK"}};
+    for (int i=0; i<vertices; ++i) this->action_space.push_back(direction);
+    
+    // this->action_space = {0, 1, 2, 3};
     this->action_meaning = {{0, "UP"}, {1, "DOWN"}, {2, "LEFT"}, {3, "RIGHT"}};
     reward_map = {
         {0, 0, 0, 1.0},
