@@ -98,6 +98,7 @@ public:
     // vector<vector<double>> reward_map;
     vvvi environment;
     map<vvi, double> reward_map;
+    int x_ = 3, y_ = 3, z_ = 3;
     
     // pair<int, int> goal_state, wall_state, start_state, agent_state;
     vvi goal_state, start_state, agent_state;
@@ -109,7 +110,8 @@ public:
     vvi actions();
     vvvi states();
     pair<int, int> next_state(pair<int, int>, int);
-    double reward(pair<int, int>, int, pair<int, int>);
+    // double reward(pair<int, int>, int, pair<int, int>);
+    double reward(vvi next_state);
     pair<int, int> reset(void);
     tuple<pair<int, int>, double, bool> step(int);
 };
@@ -175,8 +177,36 @@ pair<int, int> GridWorld::next_state(pair<int, int> state, int action) {
     }
     return next_state;
 }
-double GridWorld::reward(pair<int, int> state, int, pair<int, int> next_state) {
-    return this->reward_map[next_state.first][next_state.second];
+vvi GridWorld::next_state(vvi state, int vertex, int action) {
+    //vertex 動かす頂点番号
+    //actionの0~5がそれぞれ，上下左右前後の何と対応しているかは未確認
+    vector<tuple<int, int, int>> action_move_map = {{-1, 0, 0}, {1, 0, 0}, {0, -1, 0}, {0, 1, 0}, {0, 0, -1}, {0, 0, 1}};
+    tuple<int, int, int> move = action_move_map[action];
+    vvi next_state = state;
+    //指定された頂点を指定されて方向actionに動かす．
+    next_state[vertex][0] += get<0>(move);
+    next_state[vertex][1] += get<1>(move);
+    next_state[vertex][2] += get<2>(move);
+    int nx = next_state[vertex][0];
+    int ny = next_state[vertex][1];
+    int nz = next_state[vertex][2];
+
+    //agentの頂点を昇順に振り付けなおす
+    sort(next_state.begin(), next_state.end());//単にこれでいいのか？
+
+    //next_stateが条件を満たしていない場合動かさないものとする．
+    if (nx < 0 || nx >= this->x_ || ny < 0 || ny >= this->y_ || nz < 0 || nz >= this->z_) {
+        next_state = state;
+    } /*else if (next_state == this->wall_state) {
+        next_state = state;
+    }*/
+    return next_state;
+}
+// double GridWorld::reward(pair<int, int> state, int, pair<int, int> next_state) {
+//     return this->reward_map[next_state.first][next_state.second];
+// }
+double GridWorld::reward(vvi next_state) {
+    return this->reward_map[next_state];
 }
 pair<int, int> GridWorld::reset(void) {
     this->agent_state = this->start_state;
