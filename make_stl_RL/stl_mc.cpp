@@ -67,8 +67,8 @@ void outputTextFile2d(vvd &v, string s) {
         outputFile << endl;
     }
 }
-vector<double> greedy_probs(map<pair<int, int>, map<int, double>> Q, pair<int, int> state, double epsilon=0, int action_size=4) {
-    vector<double> qs(action_size);
+vd greedy_probs(map<pair<int, int>, map<int, double>> Q, pair<int, int> state, double epsilon=0, int action_size=4) {
+    vd qs(action_size);
     for (int i=0; i<action_size; ++i) qs[i] = Q[state][i];
     
     int max_action;
@@ -77,7 +77,7 @@ vector<double> greedy_probs(map<pair<int, int>, map<int, double>> Q, pair<int, i
             max_action = i;
     
     double base_prob = epsilon / action_size;
-    vector<double> action_probs(4, 0);
+    vd action_probs(4, 0);
     action_probs[max_action] += 1-epsilon;
     return action_probs;
 }
@@ -92,21 +92,22 @@ Point型に対して，そこにagentの頂点があったら頂点番号，な�
 class GridWorld {
 public:
     int vertices;
-    vector<int> direction;
+    vi direction;
     map<int, string> direction_mean;
-    vector<vector<int>> action_space;
+    vvi action_space;
     // vector<vector<double>> reward_map;
     vvvi environment;
-    map<vvvi, double> reward_map;
+    map<vvi, double> reward_map;
     
-    pair<int, int> goal_state, wall_state, start_state, agent_state;
+    // pair<int, int> goal_state, wall_state, start_state, agent_state;
+    vvi goal_state, start_state, agent_state;
 public:
     GridWorld();
-    int height(void);
-    int width(void);
-    pair<int, int> shape();
-    vector<int> actions();
-    vector<pair<int, int>> states();
+    // int height(void);
+    // int width(void);
+    // pair<int, int> shape();
+    vvi actions();
+    vvvi states();
     pair<int, int> next_state(pair<int, int>, int);
     double reward(pair<int, int>, int, pair<int, int>);
     pair<int, int> reset(void);
@@ -119,38 +120,29 @@ GridWorld::GridWorld() {
     this->direction_mean = {{0, "UP"}, {1, "DOWN"}, {2, "LEFT"}, {3, "RIGHT"}, {4, "FRONT"}, {5, "BACK"}};
     for (int i=0; i<vertices; ++i) this->action_space.push_back(direction);
     this->environment.assign(3, vvi(3, vi(3, -1)));
-    
-    reward_map = {
-        {0, 0, 0, 1.0},
-        {0, 0, 0, -1.0},
-        {0, 0, 0, 0}
-    };
-    goal_state = {0, 3};
-    wall_state = {1, 1};
-    start_state = {2, 0};
+    this->environment = generate_states();
+    //reward_map
+    for (auto state: this->environment) {
+        reward_map[state] = 0;
+    }
+    goal_state = {{0,0,0}, {0,0,2}, {0,2,0}, {0,2,2}, {2,0,0}, {2,0,2}, {2,2,0}, {2,2,2}};
+    start_state = {{0,0,0}, {0,0,1}, {0,1,0}, {0,1,1}, {1,0,0}, {1,0,1}, {1,1,0}, {1,1,1}};
     agent_state = start_state;
+    reward_map[goal_state] = 10;
 }
-int GridWorld::height(void) {
-    return this->reward_map.size();
-}
-int GridWorld::width(void) {
-    return this->reward_map[0].size();
-}
-pair<int, int> GridWorld::shape(void) {
-    return {this->height(), this->width()};
-}
-vector<int> GridWorld::actions(void) {
+// int GridWorld::height(void) {
+//     return this->reward_map.size();
+// }
+// int GridWorld::width(void) {
+//     return this->reward_map[0].size();
+// }
+// pair<int, int> GridWorld::shape(void) {
+//     return {this->height(), this->width()};
+// }
+vector<vector<int>> GridWorld::actions(void) {
     return this->action_space;
 }
-vector<pair<int, int>> GridWorld::states(void) {
-    vector<pair<int, int>> vec;
-    for (int h=0; h<this->height(); ++h) {
-        for (int w=0; w<this->width(); ++w) {
-            vec.push_back({h, w});
-        }
-    }
-    return vec;
-}
+
 /*
 {
     {{0, 0, 0}, {0, 0, 1}, {0, 0, 2}, {1, 0, 0}, {1, 0, 1}, {1, 0, 2}, {1, 1, 0}, {1, 1, 1}},
@@ -158,11 +150,17 @@ vector<pair<int, int>> GridWorld::states(void) {
     {{2, 0, 1}, {2, 0, 2}, {2, 1, 0}, {2, 1, 1}, {2, 1, 2}, {2, 2, 0}, {2, 2, 1}, {2, 2, 2}}
 }
 */
-vvvi GridWorld::stats(void) {
-    vvvi vec;
-    for (int i=0; i<this->vertices; ++i) {
+vvvi generate_states() {
+    vvvi tmp = {};
+    return tmp;
+}
+vvvi GridWorld::states(void) {
+    vvvi vec = generate_states();
+    // for (int i=0; i<this->vertices; ++i) {
 
-    }
+    // }
+
+    return vec;
 }
 pair<int, int> GridWorld::next_state(pair<int, int> state, int action) {
     vector<pair<int, int>> action_move_map = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
