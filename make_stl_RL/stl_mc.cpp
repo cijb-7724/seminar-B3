@@ -69,20 +69,44 @@ void outputTextFile2d(vvd &v, string s) {
         outputFile << endl;
     }
 }
-vd greedy_probs(map<pair<int, int>, map<int, double>> Q, pair<int, int> state, double epsilon=0, int action_size=4) {
-    vd qs(action_size);
-    for (int i=0; i<action_size; ++i) qs[i] = Q[state][i];
+map<pair<int, int>, double> greedy_probs(
+    map<vector<Point>, map<pair<int, int>, double>> Q,
+    vector<Point> state,
+    double epsilon=0,
+    int action_size_vertex=8,
+    int action_size_direction=6
+    ) {
+    vvd qs(action_size_vertex, vd(action_size_direction));
+    for (int i=0; i<action_size_vertex; ++i) {
+        for (int j=0; j<action_size_direction; ++j) {
+            qs[i][j] = Q[state][{i, j}];
+        }
+    }
+    double max_elm = -1e6;
+    for (int i=0; i<action_size_vertex; ++i) {
+        max_elm = max(max_elm, *max_element(qs[i].begin(), qs[i].end()));
+    }
     
-    int max_action;
-    for (int i=0; i<action_size; ++i)
-        if (qs[i] == *max_element(qs.begin(), qs.end()))
-            max_action = i;
+    pair<int, int> max_action;
+    for (int i=0; i<action_size_vertex; ++i) {
+        for (int j=0; j<action_size_direction; ++j) {
+            if (qs[i][j] == max_elm) {
+                max_action = {i, j};
+            }
+        }
+    }
     
-    double base_prob = epsilon / action_size;
-    vd action_probs(4, 0);
+    double base_prob = epsilon / (action_size_vertex * action_size_direction);
+    map<pair<int, int>, double> action_probs;
+    for (int i=0; i<action_size_vertex; ++i) {
+        for (int j=0; j<action_size_direction; ++j) {
+            action_probs[{i, j}] = base_prob;
+        }
+    }
     action_probs[max_action] += 1-epsilon;
-    return action_probs;
+    return action_probs;A
 }
+
 
 long long comb(int n, int r) {
   vector<vector<long long>> v(n + 1,vector<long long>(n + 1, 0));
@@ -161,12 +185,12 @@ public:
     GridWorld();
     vvi actions();
     vector<vector<Point>> states(void);
-    vector<Point> next_state(vector<Point> state, int vertex, int action);
-    double reward(vector<Point> next_state);
+    vector<Point> next_state(vector<Point>, int, int);
+    double reward(vector<Point>);
     vector<Point> reset(void);
     bool isin(Point);
     bool moveable(vector<Point>, int, int);
-    tuple<vector<Point>, double, bool> step(int vertex, int action);
+    tuple<vector<Point>, double, bool> step(int, int);
 };
 GridWorld::GridWorld() {
     this->vertices = 8;
@@ -265,14 +289,15 @@ public:
     map<pair<int, int>, double> random_actions;//どの頂点，方向に対していくらの確率か
     map<vector<Point>, map<pair<int, int>, double>> pi;//各状態に対して各行動をする確率
 
-    map<pair<int, int>, map<int, double>> Q;//行動価値関数
-    map<pair<int, int>, map<int, double>> cnts;//型が変わった？
-    vector<tuple<pair<int, int>, int, double>> memory;
+    //行動価値関数=ある状態において，ある行動をした時の価値double
+    map<vector<Point>, map<pair<int, int>, double>> Q;
+
+    vector<tuple<vector<Point>, pair<int, int>, double>> memory;//{state, action, reward}のtupleのvector
 
 public:
     McAgent();
-    int get_action(pair<int, int>);
-    void add(pair<int, int>, int, double);
+    pair<int, int> get_action(vector<Point>);
+    void add(vector<Point>, pair<int, int>, double);
     void reset(void);
     void update(void);
 };
@@ -295,11 +320,12 @@ McAgent::McAgent() {
         this->pi[state] = this->random_actions;
     }
 }
-int McAgent::get_action(pair<int, int> state) {
-    map<int, double> action_probs = this->pi[state];
-    vector<int> index;
+
+pair<int, int> McAgent::get_action(vector<Point> state) {
+    map<pair<int, int>, double> action_probs = this->pi[state];//<vertex, direction>, prob
+    vector<pair<int, int>> index;
     vector<double> probs;
-    for (auto itr=action_probs.begin(); itr != action_probs.end(); ++itr) {
+    for (auto itr = action_probs.begin(); itr != action_probs.end(); ++itr) {
         index.push_back(itr->first);
         if (itr == action_probs.begin()) probs.push_back(itr->second);
         else probs.push_back(*(--probs.end()) + itr->second);
@@ -308,10 +334,10 @@ int McAgent::get_action(pair<int, int> state) {
     for (int i=0; i<index.size(); ++i) {
         if (probs[i] >= tmpP) return index[i];
     }
-    return 0;
+
 }
-void McAgent::add(pair<int, int> state, int action, double reward) {
-    tuple<pair<int, int>, int, double> data = {state, action, reward};
+void McAgent::add(vector<Point> state, pair<int, int> action, double reward) {
+    tuple<vector<Point>, pair<int, int>, double> data = {state, action, reward};
     this->memory.push_back(data);
 }
 void McAgent::reset(void) {
@@ -319,23 +345,23 @@ void McAgent::reset(void) {
 }
 void McAgent::update(void) {
     double G = 0;
-    vector<tuple<pair<int, int>, int, double>> mem = this->memory;
+    vector<tuple<vector<Point>, pair<int, int>, double>> mem = this->memory;
     reverse(mem.begin(), mem.end());
     for (auto data: mem) {
-        pair<int, int> state = get<0>(data);
-        int action = get<1>(data);
+        vector<Point> state = get<0>(data);
+        pair<int, int> action = get<1>(data);
         double reward = get<2>(data);
         G = this->gamma * G + reward;
-        // this->cnts[state][action] += 1;
         this->Q[state][action] += (G - this->Q[state][action]) * this->alpha;
         
-        vector<double> action_prob = greedy_probs(this->Q, state, this->epsilon);
-        for (int i=0; i<(int)action_prob.size(); ++i) {
-            this->pi[state][i] = action_prob[i];
+        map<pair<int, int>, double> action_prob = greedy_probs(this->Q, state, this->epsilon);
+        for (int i=0; i<action_size_vertex; ++i) {
+            for (int j=0; j<action_size_direction; ++j) {
+                this->pi[state][{i, j}] = action_prob[{i, j}];
+            }
         }
     }
 }
-
 
 int main() {
     cout << "random seed = " << seed << endl;
