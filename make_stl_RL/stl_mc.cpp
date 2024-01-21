@@ -154,6 +154,7 @@ public:
     vector<vector<Point>> environment;//環境
     map<vector<Point>, double> reward_map;//座標状態列に対応してその価値
     int x_ = 3, y_ = 3, z_ = 3;//方向最大値？
+    int state_size;
 
     vector<Point> goal_state, start_state, agent_state;//座標状態
 public:
@@ -181,6 +182,8 @@ GridWorld::GridWorld() {
     start_state = {{0,0,0}, {0,0,1}, {0,1,0}, {0,1,1}, {1,0,0}, {1,0,1}, {1,1,0}, {1,1,1}};
     agent_state = start_state;
     reward_map[goal_state] = 10;
+    state_size = environment.size();
+    cout << "state_size = " << state_size << endl;
 }
 
 vector<vector<int>> GridWorld::actions(void) {
@@ -257,9 +260,11 @@ public:
     double gamma;
     double epsilon;
     double alpha;
-    int action_size;
-    map<int, double> random_actions;
-    map<pair<int, int>, map<int, double>> pi;//各座標（マス）に対して各行動をする確率
+    int action_size_vertex;//頂点の選び方通り数
+    int action_size_direction;//方向の選び方の通り数
+    map<pair<int, int>, double> random_actions;//どの頂点，方向に対していくらの確率か
+    map<vector<Point>, map<pair<int, int>, double>> pi;//各状態に対して各行動をする確率
+
     map<pair<int, int>, map<int, double>> Q;//行動価値関数
     map<pair<int, int>, map<int, double>> cnts;//型が変わった？
     vector<tuple<pair<int, int>, int, double>> memory;
@@ -276,16 +281,18 @@ McAgent::McAgent() {
     this->gamma = 0.9;
     this->epsilon = 0.1;
     this->alpha = 0.1;
-    this->action_size = 4;
+    this->action_size_vertex = 8;
+    this->action_size_direction = 6;
 
-    this->random_actions = {{0, 0.25}, {1, 0.25}, {2, 0.25}, {3, 0.25}};
-    GridWorld tmp;
-    int h = tmp.height();
-    int w = tmp.width();
-    for (int i=0; i<h; ++i) {
-        for (int j=0; j<w; ++j) {
-            this->pi[{i, j}] = random_actions;
+    for (int i=0; i<this->action_size_vertex; ++i) {
+        for (int j=0; j<this->action_size_direction; ++j) {
+            this->random_actions[{i, j}] = (double)1 / (this->action_size_vertex * this->action_size_direction);
         }
+    }
+    GridWorld tmp;
+    auto env = tmp.environment;
+    for (vector<Point> state: env) {
+        this->pi[state] = this->random_actions;
     }
 }
 int McAgent::get_action(pair<int, int> state) {
