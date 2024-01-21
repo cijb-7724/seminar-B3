@@ -64,11 +64,16 @@ int main(void){
     auto gap = getAllPattern(ga,8);
     cout << gap.size() << endl;
     
-    for (auto p : gap){
-        for (auto q : p){
-            cout << get<0>(q) << ' ' << get<1>(q) << ' ' << get<2>(q) << endl;
-        }
-        cout << endl;
+    // for (auto p : gap){
+    //     for (auto q : p){
+    //         cout << get<0>(q) << ' ' << get<1>(q) << ' ' << get<2>(q) << endl;
+    //     }
+    //     cout << endl;
+    // }
+    vector<tuple<int, int, int>> tmp = gap[0];
+    for (tuple<int, int, int> tmpp: tmp) {
+        cout << get<0>(tmpp) << ' ' << get<1>(tmpp) << ' ' << get<2>(tmpp) << endl;
     }
+
     
 }

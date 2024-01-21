@@ -26,16 +26,15 @@ using vvvi = vector<vector<vector<int>>>;
 using vvvd = vector<vector<vector<double>>>;
 
 
-
+long long comb(int n, int r);
+void innergetAllPattern(int pn,vector<vector<int>> &allpattern,vector<int> nowstate,int n,int left);
+vector<vector<tuple<int,int,int>>> getAllPattern(vector<tuple<int,int,int>> ppattern,int n);
+vector<vector<tuple<int, int, int>>> generate_states(void);
 
 //generate random 
 random_device rd;
 // long long seed = rd();//seedを数値で指定するかrd()で実行毎に変えるか
-/*
-seedによってプログラムがどこかで無限ループに入ることがある．
-たとえば
-2712030358
-*/
+
 long long seed = 0;
 mt19937 gen(seed);
 double rand_double(double mn, double mx) {
@@ -82,6 +81,59 @@ vd greedy_probs(map<pair<int, int>, map<int, double>> Q, pair<int, int> state, d
     return action_probs;
 }
 
+long long comb(int n, int r) {
+  vector<vector<long long>> v(n + 1,vector<long long>(n + 1, 0));
+  for (int i = 0; i < v.size(); i++) {
+    v[i][0] = 1;
+    v[i][i] = 1;
+  }
+  for (int j = 1; j < v.size(); j++) {
+    for (int k = 1; k < j; k++) {
+      v[j][k] = (v[j - 1][k - 1] + v[j - 1][k]);
+    }
+  }
+  return v[n][r];
+}
+void innergetAllPattern(int pn,vector<vector<int>> &allpattern,vector<int> nowstate,int n,int left){
+    if (nowstate.size()==n){
+        allpattern.push_back(nowstate);
+        return;
+    }
+    for (int i=left;i<pn-(n-nowstate.size()-1);i++){
+        nowstate.push_back(i);
+        innergetAllPattern(pn,allpattern,nowstate,n,i+1);
+        nowstate.pop_back();
+    }
+}
+vector<vector<tuple<int,int,int>>> getAllPattern(vector<tuple<int,int,int>> ppattern,int n){
+    //いったん添え字ベースで考える
+    vector<vector<int>> allpattern_index;
+    allpattern_index.reserve(comb(ppattern.size(),n));
+    vector<int> emp={};
+    emp.reserve(n);
+    innergetAllPattern(ppattern.size(),allpattern_index,emp,n,0);
+    
+    vector<vector<tuple<int,int,int>>> allpattern(allpattern_index.size(),vector<tuple<int,int,int>>(n));
+    for (int i=0;i<allpattern.size();i++){
+        for (int j=0;j<n;j++){
+            allpattern[i][j]=ppattern[allpattern_index[i][j]];
+        }
+    }
+    return allpattern;
+}
+vector<vector<tuple<int, int, int>>> generate_states(void) {
+    vector<tuple<int,int,int>> ga;
+    for (int i=0;i<3;i++){
+        for (int j=0;j<3;j++){
+            for (int k=0;k<3;k++){
+                ga.push_back({i,j,k});
+            }
+        }
+    }
+    vector<vector<tuple<int, int, int>>> gap = getAllPattern(ga, 8);
+    return gap;
+}
+
 //grid world class p.97~
 //---------------------------------------------------------------------
 /*
@@ -96,19 +148,19 @@ public:
     map<int, string> direction_mean;
     vvi action_space;
     // vector<vector<double>> reward_map;
-    vvvi environment;
-    map<vvi, double> reward_map;
+    vector<vector<tuple<int, int, int>>> environment;
+    map<vector<tuple<int, int, int>>, double> reward_map;
     int x_ = 3, y_ = 3, z_ = 3;
     
     // pair<int, int> goal_state, wall_state, start_state, agent_state;
-    vvi goal_state, start_state, agent_state;
+    vector<tuple<int, int, int>> goal_state, start_state, agent_state;
 public:
     GridWorld();
     // int height(void);
     // int width(void);
     // pair<int, int> shape();
     vvi actions();
-    vvvi states();
+    vector<vector<tuple<int, int, int>>> states(void);
     pair<int, int> next_state(pair<int, int>, int);
     // double reward(pair<int, int>, int, pair<int, int>);
     double reward(vvi next_state);
@@ -121,7 +173,6 @@ GridWorld::GridWorld() {
     this->direction = {0, 1, 2, 3, 4, 5};
     this->direction_mean = {{0, "UP"}, {1, "DOWN"}, {2, "LEFT"}, {3, "RIGHT"}, {4, "FRONT"}, {5, "BACK"}};
     for (int i=0; i<vertices; ++i) this->action_space.push_back(direction);
-    this->environment.assign(3, vvi(3, vi(3, -1)));
     this->environment = generate_states();
     //reward_map
     for (auto state: this->environment) {
@@ -152,20 +203,21 @@ vector<vector<int>> GridWorld::actions(void) {
     {{2, 0, 1}, {2, 0, 2}, {2, 1, 0}, {2, 1, 1}, {2, 1, 2}, {2, 2, 0}, {2, 2, 1}, {2, 2, 2}}
 }
 */
-vvvi generate_states() {
-    vvvi tmp = {};
-    return tmp;
-}
-vvvi GridWorld::states(void) {
-    vvvi vec = generate_states();
-    // for (int i=0; i<this->vertices; ++i) {
 
-    // }
-
+vector<vector<tuple<int, int, int>>> GridWorld::states(void) {
+    vector<vector<tuple<int, int, int>>> vec = generate_states();
     return vec;
 }
 pair<int, int> GridWorld::next_state(pair<int, int> state, int action) {
+    /*
+    action_move_map
+    ある頂点に対して，上下左右前後がある
+    v[vertices] = {{-1, 0, 0}, {1, 0, 0}, ..., {0, 0, 1}}となるので
+    vector<vector<tuple<int, int, int>>>
+    */
+    vector<vector<
     vector<pair<int, int>> action_move_map = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+    
     pair<int, int> move = action_move_map[action];
     pair<int, int> next_state = {state.first + move.first, state.second + move.second};
     int ny = next_state.first, nx = next_state.second;
@@ -193,6 +245,7 @@ vvi GridWorld::next_state(vvi state, int vertex, int action) {
 
     //agentの頂点を昇順に振り付けなおす
     sort(next_state.begin(), next_state.end());//単にこれでいいのか？
+    //ここでstlに張り直し，
 
     //next_stateが条件を満たしていない場合動かさないものとする．
     if (nx < 0 || nx >= this->x_ || ny < 0 || ny >= this->y_ || nz < 0 || nz >= this->z_) {
@@ -303,8 +356,6 @@ void McAgent::update(void) {
 }
 
 
-
-
 int main() {
     cout << "random seed = " << seed << endl;
     GridWorld env;
@@ -364,9 +415,6 @@ int main() {
 
 /*
 
-aaaxxxxxaaa
-xxxxxaxxxxx
-aaaxxxxxaaa
 
 
 */
