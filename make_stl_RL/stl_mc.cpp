@@ -108,7 +108,7 @@ void innergetAllPattern(int pn,vector<vector<int>> &allpattern,vector<int> nowst
         nowstate.pop_back();
     }
 }
-vector<vector<Point>> getAllPattern(vector<tuple<int,int,int>> ppattern,int n){
+vector<vector<Point>> getAllPattern(vector<Point> ppattern,int n){
     //いったん添え字ベースで考える
     vector<vector<int>> allpattern_index;
     allpattern_index.reserve(comb(ppattern.size(),n));
@@ -158,16 +158,14 @@ public:
     vector<Point> goal_state, start_state, agent_state;//座標状態
 public:
     GridWorld();
-    // int height(void);
-    // int width(void);
-    // pair<int, int> shape();
     vvi actions();
-    map<Point,int> states();
-    pair<int, int> next_state(pair<int, int>, int);
-    double reward(Point next_state);
+    vector<vector<Point>> states(void);
+    vector<Point> next_state(vector<Point> state, int vertex, int action);
+    double reward(vector<Point> next_state);
     vector<Point> reset(void);
     bool isin(Point);
-    tuple<pair<int, int>, double, bool> step(int);
+    bool moveable(vector<Point>, int, int);
+    tuple<vector<Point>, double, bool> step(int vertex, int action);
 };
 GridWorld::GridWorld() {
     this->vertices = 8;
@@ -184,97 +182,73 @@ GridWorld::GridWorld() {
     agent_state = start_state;
     reward_map[goal_state] = 10;
 }
-// int GridWorld::height(void) {
-//     return this->reward_map.size();
-// }
-// int GridWorld::width(void) {
-//     return this->reward_map[0].size();
-// }
-// pair<int, int> GridWorld::shape(void) {
-//     return {this->height(), this->width()};
-// }
+
 vector<vector<int>> GridWorld::actions(void) {
     return this->action_space;
 }
 
-/*
-{
-    {{0, 0, 0}, {0, 0, 1}, {0, 0, 2}, {1, 0, 0}, {1, 0, 1}, {1, 0, 2}, {1, 1, 0}, {1, 1, 1}},
-    ...
-    {{2, 0, 1}, {2, 0, 2}, {2, 1, 0}, {2, 1, 1}, {2, 1, 2}, {2, 2, 0}, {2, 2, 1}, {2, 2, 2}}
-}
-*/
-
-vector<vector<tuple<int, int, int>>> GridWorld::states(void) {
-    vector<vector<tuple<int, int, int>>> vec = generate_states();
+vector<vector<Point>> GridWorld::states(void) {
+    vector<vector<Point>> vec = generate_states();
     return vec;
 }
-pair<int, int> GridWorld::next_state(pair<int, int> state, int action) {
-    /*
-    action_move_map
-    ある頂点に対して，上下左右前後がある
-    v[vertices] = {{-1, 0, 0}, {1, 0, 0}, ..., {0, 0, 1}}となるので
-    vector<vector<tuple<int, int, int>>>
-    */
-    vector<pair<int, int>> action_move_map = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
-    
-    pair<int, int> move = action_move_map[action];
-    pair<int, int> next_state = {state.first + move.first, state.second + move.second};
-    int ny = next_state.first, nx = next_state.second;
+vector<Point> GridWorld::next_state(vector<Point> state, int vertex, int action) {
+    //vertex 動かす頂点番号
+    //actionの0~5がそれぞれ，上下左右前後の何と対応しているかは確認済み
+    vector<Point> action_move_map = {{0, 1, 0}, {0, -1, 0}, {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
+    Point move = action_move_map[action];
+    vector<Point> next_state = state;
 
-    if (nx < 0 || nx >= this->width() || ny < 0 || ny >= this->height()) {
+    //指定された頂点を指定された方向actionに動かす．
+    next_state[vertex] += move;
+
+    //next_stateが条件を満たしていない場合動かさないものとする．関数moveableは後で合わせる
+    if (!isin(next_state[vertex]) || !moveable(state,vertex,action)) {
         next_state = state;
-    } else if (next_state == this->wall_state) {
-        next_state = state;
+    }
+    else{
+      //agentの頂点を昇順に振り付けなおす
+      sort(next_state.begin(), next_state.end());//単にこれでいいのか？
     }
     return next_state;
 }
-vvi GridWorld::next_state(vvi state, int vertex, int action) {
-    //vertex 動かす頂点番号
-    //actionの0~5がそれぞれ，上下左右前後の何と対応しているかは未確認
-    vector<tuple<int, int, int>> action_move_map = {{-1, 0, 0}, {1, 0, 0}, {0, -1, 0}, {0, 1, 0}, {0, 0, -1}, {0, 0, 1}};
-    tuple<int, int, int> move = action_move_map[action];
-    vvi next_state = state;
-    //指定された頂点を指定されて方向actionに動かす．
-    next_state[vertex][0] += get<0>(move);
-    next_state[vertex][1] += get<1>(move);
-    next_state[vertex][2] += get<2>(move);
-    int nx = next_state[vertex][0];
-    int ny = next_state[vertex][1];
-    int nz = next_state[vertex][2];
 
-    //agentの頂点を昇順に振り付けなおす
-    sort(next_state.begin(), next_state.end());//単にこれでいいのか？
-    //ここでstlに張り直し，
 
-    //next_stateが条件を満たしていない場合動かさないものとする．
-    if (nx < 0 || nx >= this->x_ || ny < 0 || ny >= this->y_ || nz < 0 || nz >= this->z_) {
-        next_state = state;
-    } /*else if (next_state == this->wall_state) {
-        next_state = state;
-    }*/
-    return next_state;
-}
 // double GridWorld::reward(pair<int, int> state, int, pair<int, int> next_state) {
 //     return this->reward_map[next_state.first][next_state.second];
 // }
-double GridWorld::reward(vvi next_state) {
+double GridWorld::reward(vector<Point> next_state) {
     return this->reward_map[next_state];
 }
-pair<int, int> GridWorld::reset(void) {
+vector<Point> GridWorld::reset(void) {
     this->agent_state = this->start_state;
     return this->agent_state;
 }
-tuple<pair<int, int>, double, bool> GridWorld::step(int action) {
-    pair<int, int> state = this->agent_state;
-    pair<int, int> next_state = this->next_state(state, action);
-    double reward = this->reward(state, action, next_state);
+//範囲内かの判定
+bool GridWorld::isin(Point p){
+   int nx = p.x;
+   int ny = p.y;
+   int nz = p.z;
+   if (nx < 0 || nx >= this->x_ || ny < 0 || ny >= this->y_ || nz < 0 || nz >= this->z_){
+      return false;
+   }
+   else{
+      return true;
+   }
+}
+//動けるかどうかの判定
+bool GridWorld::moveable(vector<Point> state, int vertex, int action) {
+    return true;
+}
+
+tuple<vector<Point>, double, bool> GridWorld::step(int vertex, int action) {
+    vector<Point> state = this->agent_state;
+    vector<Point> next_state = this->next_state(state, vertex, action);
+    double reward = this->reward(next_state);
     bool done = (next_state == this->goal_state);
     this->agent_state = next_state;
     return make_tuple(next_state, reward, done);
-    // return {next_state, reward, done};
-    
 }
+
 //---------------------------------------------------------------------
 
 //---------------------------------------------------------------------
