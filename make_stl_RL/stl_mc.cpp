@@ -10,6 +10,9 @@
 #include <fstream>
 #include <iomanip> //出力桁数
 
+#include "Point.hpp"
+#include "Point.cpp"
+
 using namespace std;
 
 #define yes "Yes"
@@ -28,8 +31,8 @@ using vvvd = vector<vector<vector<double>>>;
 
 long long comb(int n, int r);
 void innergetAllPattern(int pn,vector<vector<int>> &allpattern,vector<int> nowstate,int n,int left);
-vector<vector<tuple<int,int,int>>> getAllPattern(vector<tuple<int,int,int>> ppattern,int n);
-vector<vector<tuple<int, int, int>>> generate_states(void);
+vector<vector<Point>> getAllPattern(vector<tuple<int,int,int>> ppattern,int n);
+vector<vector<Point>> generate_states(void);
 
 //generate random 
 random_device rd;
@@ -105,7 +108,7 @@ void innergetAllPattern(int pn,vector<vector<int>> &allpattern,vector<int> nowst
         nowstate.pop_back();
     }
 }
-vector<vector<tuple<int,int,int>>> getAllPattern(vector<tuple<int,int,int>> ppattern,int n){
+vector<vector<Point>> getAllPattern(vector<tuple<int,int,int>> ppattern,int n){
     //いったん添え字ベースで考える
     vector<vector<int>> allpattern_index;
     allpattern_index.reserve(comb(ppattern.size(),n));
@@ -113,7 +116,7 @@ vector<vector<tuple<int,int,int>>> getAllPattern(vector<tuple<int,int,int>> ppat
     emp.reserve(n);
     innergetAllPattern(ppattern.size(),allpattern_index,emp,n,0);
     
-    vector<vector<tuple<int,int,int>>> allpattern(allpattern_index.size(),vector<tuple<int,int,int>>(n));
+    vector<vector<Point>> allpattern(allpattern_index.size(),vector<Point>(n));
     for (int i=0;i<allpattern.size();i++){
         for (int j=0;j<n;j++){
             allpattern[i][j]=ppattern[allpattern_index[i][j]];
@@ -121,7 +124,7 @@ vector<vector<tuple<int,int,int>>> getAllPattern(vector<tuple<int,int,int>> ppat
     }
     return allpattern;
 }
-vector<vector<tuple<int, int, int>>> generate_states(void) {
+vector<vector<Point>> generate_states(void) {
     vector<tuple<int,int,int>> ga;
     for (int i=0;i<3;i++){
         for (int j=0;j<3;j++){
@@ -130,7 +133,7 @@ vector<vector<tuple<int, int, int>>> generate_states(void) {
             }
         }
     }
-    vector<vector<tuple<int, int, int>>> gap = getAllPattern(ga, 8);
+    vector<vector<Point>> gap = getAllPattern(ga, 8);
     return gap;
 }
 
@@ -143,31 +146,29 @@ Point型に対して，そこにagentの頂点があったら頂点番号，な�
 */
 class GridWorld {
 public:
-    int vertices;
-    vi direction;
-    map<int, string> direction_mean;
-    vvi action_space;
-    // vector<vector<double>> reward_map;
-    vector<vector<tuple<int, int, int>>> environment;
-    map<vector<tuple<int, int, int>>, double> reward_map;
-    int x_ = 3, y_ = 3, z_ = 3;
-    
-    // pair<int, int> goal_state, wall_state, start_state, agent_state;
-    vector<tuple<int, int, int>> goal_state, start_state, agent_state;
+    int vertices;//頂点数
+    vector<int> direction;//移動方向パターン
+    map<int, string> direction_mean;//各点の移動の意味
+    // bokuzinコメント : コレ↑mapだけど、vector<string>でよくね？
+    vector<vector<int>> action_space;//各点ごとの移動パターン　必要？
+    vector<vector<Point>> environment;//環境
+    map<vector<Point>, double> reward_map;//座標状態列に対応してその価値
+    int x_ = 3, y_ = 3, z_ = 3;//方向最大値？
+
+    vector<Point> goal_state, start_state, agent_state;//座標状態
 public:
     GridWorld();
     // int height(void);
     // int width(void);
     // pair<int, int> shape();
     vvi actions();
-    vector<vector<tuple<int, int, int>>> states(void);
+    map<Point,int> states();
     pair<int, int> next_state(pair<int, int>, int);
-    // double reward(pair<int, int>, int, pair<int, int>);
-    double reward(vvi next_state);
-    pair<int, int> reset(void);
+    double reward(Point next_state);
+    vector<Point> reset(void);
+    bool isin(Point);
     tuple<pair<int, int>, double, bool> step(int);
 };
-
 GridWorld::GridWorld() {
     this->vertices = 8;
     this->direction = {0, 1, 2, 3, 4, 5};
@@ -215,7 +216,6 @@ pair<int, int> GridWorld::next_state(pair<int, int> state, int action) {
     v[vertices] = {{-1, 0, 0}, {1, 0, 0}, ..., {0, 0, 1}}となるので
     vector<vector<tuple<int, int, int>>>
     */
-    vector<vector<
     vector<pair<int, int>> action_move_map = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
     
     pair<int, int> move = action_move_map[action];
