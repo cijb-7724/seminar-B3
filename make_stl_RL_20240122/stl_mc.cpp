@@ -93,6 +93,12 @@ vd greedy_probs(map<pair<int, int>, map<int, double>> Q, pair<int, int> state, d
     return action_probs;
 }
 
+//移動した
+map<vector<Point>,double> generate_states() {
+    map<vector<Point>,double> tmp = {};
+    return tmp;
+}
+
 //grid world class p.97~
 //---------------------------------------------------------------------
 /*
@@ -108,7 +114,7 @@ public:
     map<int, string> direction_mean;//各点の移動の意味
     // bokuzinコメント : コレ↑mapだけど、vector<string>でよくね？
     vector<vector<int>> action_space;//各点ごとの移動パターン　必要？
-    map<Point,int> environment;//環境
+    map<vector<Point>, double> environment;//環境
     map<vector<Point>, double> reward_map;//座標状態列に対応してその価値
     int x_ = 3, y_ = 3, z_ = 3;//方向最大値？
 
@@ -119,12 +125,12 @@ public:
     // int width(void);
     // pair<int, int> shape();
     vvi actions();
-    map<Point,int> states();
-    pair<int, int> next_state(pair<int, int>, int);
-    double reward(Point next_state);
+    map<vector<Point>,double> states();
+    vector<Point> next_state(vector<Point> state, int vertex, int action);
+    double reward(vector<Point> next_state);
     vector<Point> reset(void);
     bool isin(Point);
-    tuple<pair<int, int>, double, bool> step(int);
+    tuple<vector<Point>, double, bool> step(int vertex, int action);
 };
 
 GridWorld::GridWorld() {
@@ -134,7 +140,7 @@ GridWorld::GridWorld() {
     this->action_space.reserve(vertices);
     for (int i=0; i<vertices; ++i) this->action_space.push_back(direction);
 
-    this->environment.assign(x_, vvi(y_, vi(z_, -1)));//←これの役割下のgenerate_statesに統合してよくない？
+    //this->environment.assign(x_, vvi(y_, vi(z_, -1)));//←これの役割下のgenerate_statesに統合してよくない？
     this->environment = generate_states();
     //reward_map
 
@@ -166,13 +172,9 @@ vector<vector<int>> GridWorld::actions(void) {
     {{2, 0, 1}, {2, 0, 2}, {2, 1, 0}, {2, 1, 1}, {2, 1, 2}, {2, 2, 0}, {2, 2, 1}, {2, 2, 2}}
 }
 */
-map<Point,int> generate_states() {
-    map<Point,int> tmp = {};
-    return tmp;
-}
 
-map<Point,int> GridWorld::states(void) {
-    map<Point,int> vec = generate_states();
+map<vector<Point>,double> GridWorld::states(void) {
+    map<vector<Point>,double> vec = generate_states();
     // for (int i=0; i<this->vertices; ++i) {
 
     // }
@@ -191,7 +193,7 @@ vector<Point> GridWorld::next_state(vector<Point> state, int vertex, int action)
     next_state[vertex] += move;
 
     //next_stateが条件を満たしていない場合動かさないものとする．関数moveableは後で合わせる
-    if (!isin(next_state) || !moveable(state,vertex,action)) {
+    if (!isin(next_state[vertex]) || !moveable(state,vertex,action)) {
         next_state = state;
     }
     else{
@@ -213,10 +215,11 @@ vector<Point> GridWorld::reset(void) {
     return this->agent_state;
 }
 
+//範囲内かの判定
 bool GridWorld::isin(Point p){
-   int nx = next_state[vertex].x;
-   int ny = next_state[vertex].y;
-   int nz = next_state[vertex].z;
+   int nx = p.x;
+   int ny = p.y;
+   int nz = p.z;
    if (nx < 0 || nx >= this->x_ || ny < 0 || ny >= this->y_ || nz < 0 || nz >= this->z_){
       return false;
    }
@@ -225,18 +228,20 @@ bool GridWorld::isin(Point p){
    }
 }
 
-tuple<pair<int, int>, double, bool> GridWorld::step(int action) {
-    pair<int, int> state = this->agent_state;
-    pair<int, int> next_state = this->next_state(state, action);
-    double reward = this->reward(state, action, next_state);
+tuple<vector<Point>, double, bool> GridWorld::step(int vertex, int action) {
+    vector<Point> state = this->agent_state;
+    vector<Point> next_state = this->next_state(state, vertex, action);
+    double reward = this->reward(next_state);
     bool done = (next_state == this->goal_state);
     this->agent_state = next_state;
     return make_tuple(next_state, reward, done);
-    // return {next_state, reward, done};
 }
+
 //---------------------------------------------------------------------
 
 //---------------------------------------------------------------------
+
+/*
 class McAgent {
 public:
     double gamma;
@@ -313,12 +318,13 @@ void McAgent::update(void) {
         }
     }
 }
-
+*/
 
 
 
 int main() {
     cout << "random seed = " << seed << endl;
+    /*
     GridWorld env;
     McAgent agent;
     int episodes = 10000;
@@ -371,14 +377,5 @@ int main() {
         }
         cout << endl;
     }
+    */
 }
-
-
-/*
-
-aaaxxxxxaaa
-xxxxxaxxxxx
-aaaxxxxxaaa
-
-
-*/
