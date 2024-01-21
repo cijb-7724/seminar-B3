@@ -52,5 +52,23 @@ next_stateメソッドを3次元に対応
 reward関数を対応
 
 
-1/22 4:00~ 作業
-点の情報はvector<int>ではなくtuple<int, int, int>で保持する．
+1/22 4:00~ 作業　McAgent();
+
+action_size = 4
+だったのを
+action_size_vertex = 8;
+action_size_direction = 6;
+という2つの変数に変更した
+
+this->random_actions = {{0, 0.25}, {1, 0.25}, {2, 0.25}, {3, 0.25}};
+だった部分を
+{vertex, direction}に対して1つの確率doubleを対応させた
+{{0, 0}, 1/48}, ... , {{7, 5}, 1/48}
+
+共通の型
+state     : vector<Point> 状態
+reward    : double 報酬
+action    : pair<int, int> どの頂点をどの方向に動かすか
+vertex    : int 頂点
+direction : int 動かす方向
+action = {vertex, direction}

@@ -31,7 +31,7 @@ using vvvd = vector<vector<vector<double>>>;
 
 long long comb(int n, int r);
 void innergetAllPattern(int pn,vector<vector<int>> &allpattern,vector<int> nowstate,int n,int left);
-vector<vector<Point>> getAllPattern(vector<tuple<int,int,int>> ppattern,int n);
+vector<vector<Point>> getAllPattern(vector<Point> ppattern,int n);
 vector<vector<Point>> generate_states(void);
 
 //generate random 
@@ -104,7 +104,7 @@ map<pair<int, int>, double> greedy_probs(
         }
     }
     action_probs[max_action] += 1-epsilon;
-    return action_probs;A
+    return action_probs;
 }
 
 
@@ -149,7 +149,7 @@ vector<vector<Point>> getAllPattern(vector<Point> ppattern,int n){
     return allpattern;
 }
 vector<vector<Point>> generate_states(void) {
-    vector<tuple<int,int,int>> ga;
+    vector<Point> ga;
     for (int i=0;i<3;i++){
         for (int j=0;j<3;j++){
             for (int k=0;k<3;k++){
@@ -190,7 +190,7 @@ public:
     vector<Point> reset(void);
     bool isin(Point);
     bool moveable(vector<Point>, int, int);
-    tuple<vector<Point>, double, bool> step(int, int);
+    tuple<vector<Point>, double, bool> step(pair<int, int>);
 };
 GridWorld::GridWorld() {
     this->vertices = 8;
@@ -218,18 +218,18 @@ vector<vector<Point>> GridWorld::states(void) {
     vector<vector<Point>> vec = generate_states();
     return vec;
 }
-vector<Point> GridWorld::next_state(vector<Point> state, int vertex, int action) {
+vector<Point> GridWorld::next_state(vector<Point> state, int vertex, int direction) {
     //vertex 動かす頂点番号
-    //actionの0~5がそれぞれ，上下左右前後の何と対応しているかは確認済み
+    //directionの0~5がそれぞれ，上下左右前後の何と対応しているかは確認済み
     vector<Point> action_move_map = {{0, 1, 0}, {0, -1, 0}, {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
-    Point move = action_move_map[action];
+    Point move = action_move_map[direction];
     vector<Point> next_state = state;
 
-    //指定された頂点を指定された方向actionに動かす．
+    //指定された頂点を指定された方向directionに動かす．
     next_state[vertex] += move;
 
     //next_stateが条件を満たしていない場合動かさないものとする．関数moveableは後で合わせる
-    if (!isin(next_state[vertex]) || !moveable(state,vertex,action)) {
+    if (!isin(next_state[vertex]) || !moveable(state,vertex,direction)) {
         next_state = state;
     }
     else{
@@ -263,13 +263,18 @@ bool GridWorld::isin(Point p){
    }
 }
 //動けるかどうかの判定
-bool GridWorld::moveable(vector<Point> state, int vertex, int action) {
+bool GridWorld::moveable(vector<Point> state, int vertex, int direction) {
+    vector<Point> state_tmp = state;
+    sort(state_tmp.begin(), state_tmp.end());
+    for (int i=0; i<state_tmp.size()-1; ++i) {
+        if (state_tmp[i] == state_tmp[i+1]) return false;
+    }
     return true;
 }
 
-tuple<vector<Point>, double, bool> GridWorld::step(int vertex, int action) {
+tuple<vector<Point>, double, bool> GridWorld::step(pair<int, int> action) {
     vector<Point> state = this->agent_state;
-    vector<Point> next_state = this->next_state(state, vertex, action);
+    vector<Point> next_state = this->next_state(state, action.first, action.second);
     double reward = this->reward(next_state);
     bool done = (next_state == this->goal_state);
     this->agent_state = next_state;
@@ -363,60 +368,77 @@ void McAgent::update(void) {
     }
 }
 
+void show_state(vector<Point> state) {
+    for (int i=0; i<state.size(); ++i) {
+        cout << "(" << state[i].x << "," << state[i].y << "," << state[i].z << ") ";
+    }
+    cout << endl;
+}
+
 int main() {
-    cout << "random seed = " << seed << endl;
     GridWorld env;
     McAgent agent;
     int episodes = 10000;
+    long long cnt = 0;
     for (int episode=0; episode<episodes; ++episode) {
-        pair<int, int> state = env.reset();
+        cout << "epsode = " << episode << endl;
+        vector<Point> state = env.reset();
+        show_state(state);
         agent.reset();
         while (true) {
-            int action = agent.get_action(state);
-            tuple<pair<int, int>, double, bool> step = env.step(action);
-            pair<int, int> next_state = get<0>(step);
+            ++cnt;
+            cout << cnt << endl;
+            // if (cnt % 10000 == 0) cout << cnt << endl;
+            pair<int, int> action = agent.get_action(state);
+            cout << "get action" << endl;
+            tuple<vector<Point>, double, bool>  step = env.step(action);
+            cout << "step" << endl;
+            vector<Point> next_state = get<0>(step);
             double reward = get<1>(step);
             bool done = get<2>(step);
 
             agent.add(state, action, reward);
+            cout << "add" << endl;
             if (done) {
                 agent.update();
-                // cout << "episode " << episode << " done" << endl;
-                // cout << agent.memory.size() << endl;
+                cout << "episode " << episode << " done" << endl;
+                cout << agent.memory.size() << endl;
                 break;
             }
             state = next_state;
+            show_state(state);
         }
     }
-    cout << fixed << setprecision(2);
-    for (int i=0; i<env.height(); ++i) {
-        for (int j=0; j<env.width(); ++j) {
-            // cout << "i, j = " << i << ',' << j << endl;
-            if (env.wall_state == make_pair(i, j)) {
-                cout << "W";
-                continue;
-            } else if (env.goal_state == make_pair(i, j)) {
-                cout << "G";
-                continue;
-            }
-            double mx = -10;
-            for (int k=0; k<agent.action_size; ++k) {
-                // cout << env.action_meaning[k] << " : ";
-                // cout << agent.Q[{i, j}][k] << ' ';
-                mx = max(mx, agent.Q[{i, j}][k]);
-            }
-            for (int k=0; k<agent.action_size; ++k) {
-                if (agent.Q[{i, j}][k] == mx) {
-                    if (env.action_meaning[k] == "LEFT") cout << "<";
-                    else if (env.action_meaning[k] == "RIGHT") cout << ">";
-                    else if (env.action_meaning[k] == "UP") cout << "^";
-                    else cout << "v";
-                }
-            }
-            // cout << endl;
-        }
-        cout << endl;
-    }
+    cout << "learn finished" << endl;
+    // cout << fixed << setprecision(2);
+    // for (int i=0; i<env.height(); ++i) {
+    //     for (int j=0; j<env.width(); ++j) {
+    //         // cout << "i, j = " << i << ',' << j << endl;
+    //         if (env.wall_state == make_pair(i, j)) {
+    //             cout << "W";
+    //             continue;
+    //         } else if (env.goal_state == make_pair(i, j)) {
+    //             cout << "G";
+    //             continue;
+    //         }
+    //         double mx = -10;
+    //         for (int k=0; k<agent.action_size; ++k) {
+    //             // cout << env.action_meaning[k] << " : ";
+    //             // cout << agent.Q[{i, j}][k] << ' ';
+    //             mx = max(mx, agent.Q[{i, j}][k]);
+    //         }
+    //         for (int k=0; k<agent.action_size; ++k) {
+    //             if (agent.Q[{i, j}][k] == mx) {
+    //                 if (env.action_meaning[k] == "LEFT") cout << "<";
+    //                 else if (env.action_meaning[k] == "RIGHT") cout << ">";
+    //                 else if (env.action_meaning[k] == "UP") cout << "^";
+    //                 else cout << "v";
+    //             }
+    //         }
+    //         // cout << endl;
+    //     }
+    //     cout << endl;
+    // }
 }
 
 
