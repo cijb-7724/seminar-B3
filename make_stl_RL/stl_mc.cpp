@@ -8,7 +8,7 @@
 #include <string>
 #include <random>
 #include <fstream>
-#include <iomanip> //出力桁数
+#include <chrono> // 時間を計測
 
 #include "Point.hpp"
 #include "Point.cpp"
@@ -185,12 +185,12 @@ public:
     GridWorld();
     vvi actions();
     vector<vector<Point>> states(void);
-    vector<Point> next_state(vector<Point>, int, int);
-    double reward(vector<Point>);
+    vector<Point> next_state(vector<Point> &, int, int);
+    double reward(vector<Point> &);
     vector<Point> reset(void);
-    bool isin(Point);
-    bool moveable(vector<Point>, int, int);
-    tuple<vector<Point>, double, bool> step(pair<int, int>);
+    bool isin(Point &);
+    bool moveable(vector<Point> &, int, int);
+    tuple<vector<Point>, double, bool> step(pair<int, int> &);
 };
 GridWorld::GridWorld() {
     this->vertices = 8;
@@ -218,7 +218,7 @@ vector<vector<Point>> GridWorld::states(void) {
     vector<vector<Point>> vec = generate_states();
     return vec;
 }
-vector<Point> GridWorld::next_state(vector<Point> state, int vertex, int direction) {
+vector<Point> GridWorld::next_state(vector<Point> &state, int vertex, int direction) {
     //vertex 動かす頂点番号
     //directionの0~5がそれぞれ，上下左右前後の何と対応しているかは確認済み
     vector<Point> action_move_map = {{0, 1, 0}, {0, -1, 0}, {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
@@ -229,7 +229,7 @@ vector<Point> GridWorld::next_state(vector<Point> state, int vertex, int directi
     next_state[vertex] += move;
 
     //next_stateが条件を満たしていない場合動かさないものとする．関数moveableは後で合わせる
-    if (!isin(next_state[vertex]) || !moveable(state,vertex,direction)) {
+    if (!isin(next_state[vertex]) || !moveable(next_state,vertex,direction)) {
         next_state = state;
     }
     else{
@@ -243,7 +243,7 @@ vector<Point> GridWorld::next_state(vector<Point> state, int vertex, int directi
 // double GridWorld::reward(pair<int, int> state, int, pair<int, int> next_state) {
 //     return this->reward_map[next_state.first][next_state.second];
 // }
-double GridWorld::reward(vector<Point> next_state) {
+double GridWorld::reward(vector<Point> &next_state) {
     return this->reward_map[next_state];
 }
 vector<Point> GridWorld::reset(void) {
@@ -251,7 +251,7 @@ vector<Point> GridWorld::reset(void) {
     return this->agent_state;
 }
 //範囲内かの判定
-bool GridWorld::isin(Point p){
+bool GridWorld::isin(Point &p){
    int nx = p.x;
    int ny = p.y;
    int nz = p.z;
@@ -263,7 +263,7 @@ bool GridWorld::isin(Point p){
    }
 }
 //動けるかどうかの判定
-bool GridWorld::moveable(vector<Point> state, int vertex, int direction) {
+bool GridWorld::moveable(vector<Point> &state, int vertex, int direction) {
     vector<Point> state_tmp = state;
     sort(state_tmp.begin(), state_tmp.end());
     for (int i=0; i<state_tmp.size()-1; ++i) {
@@ -272,7 +272,7 @@ bool GridWorld::moveable(vector<Point> state, int vertex, int direction) {
     return true;
 }
 
-tuple<vector<Point>, double, bool> GridWorld::step(pair<int, int> action) {
+tuple<vector<Point>, double, bool> GridWorld::step(pair<int, int> &action) {
     vector<Point> state = this->agent_state;
     vector<Point> next_state = this->next_state(state, action.first, action.second);
     double reward = this->reward(next_state);
@@ -301,8 +301,8 @@ public:
 
 public:
     McAgent();
-    pair<int, int> get_action(vector<Point>);
-    void add(vector<Point>, pair<int, int>, double);
+    pair<int, int> get_action(vector<Point> &);
+    void add(vector<Point> &, pair<int, int> &, double &);
     void reset(void);
     void update(void);
 };
@@ -326,7 +326,7 @@ McAgent::McAgent() {
     }
 }
 
-pair<int, int> McAgent::get_action(vector<Point> state) {
+pair<int, int> McAgent::get_action(vector<Point> &state) {
     map<pair<int, int>, double> action_probs = this->pi[state];//<vertex, direction>, prob
     vector<pair<int, int>> index;
     vector<double> probs;
@@ -341,7 +341,7 @@ pair<int, int> McAgent::get_action(vector<Point> state) {
     }
 
 }
-void McAgent::add(vector<Point> state, pair<int, int> action, double reward) {
+void McAgent::add(vector<Point> &state, pair<int, int> &action, double &reward) {
     tuple<vector<Point>, pair<int, int>, double> data = {state, action, reward};
     this->memory.push_back(data);
 }
@@ -352,23 +352,41 @@ void McAgent::update(void) {
     double G = 0;
     vector<tuple<vector<Point>, pair<int, int>, double>> mem = this->memory;
     reverse(mem.begin(), mem.end());
+    cout << "reverse" << endl;
+    long long cnt = 0;
     for (auto data: mem) {
-        vector<Point> state = get<0>(data);
-        pair<int, int> action = get<1>(data);
-        double reward = get<2>(data);
+        ++cnt;
+        if (cnt % 10000 == 0) cout << cnt << endl;
+        auto start_time = std::chrono::high_resolution_clock::now();
+        const vector<Point>& state = get<0>(data);
+        const pair<int, int>& action = get<1>(data);
+        const double& reward = get<2>(data);
         G = this->gamma * G + reward;
         this->Q[state][action] += (G - this->Q[state][action]) * this->alpha;
-        
+        auto end_time = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
+        cout << "G caluculate time: " << duration.count() << " microseconds" << endl;
+
+        start_time = std::chrono::high_resolution_clock::now();
         map<pair<int, int>, double> action_prob = greedy_probs(this->Q, state, this->epsilon);
+        end_time = std::chrono::high_resolution_clock::now();
+        duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
+        cout << "greedy_probs caluculate time: " << duration.count() << " microseconds" << endl;
+
+        start_time = std::chrono::high_resolution_clock::now();
         for (int i=0; i<action_size_vertex; ++i) {
             for (int j=0; j<action_size_direction; ++j) {
                 this->pi[state][{i, j}] = action_prob[{i, j}];
             }
         }
+        end_time = std::chrono::high_resolution_clock::now();
+        duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
+        cout << "pi update caluculate time: " << duration.count() << " microseconds" << endl;
+        
     }
 }
 
-void show_state(vector<Point> state) {
+void show_state(vector<Point> &state) {
     for (int i=0; i<state.size(); ++i) {
         cout << "(" << state[i].x << "," << state[i].y << "," << state[i].z << ") ";
     }
@@ -379,34 +397,33 @@ int main() {
     GridWorld env;
     McAgent agent;
     int episodes = 10000;
-    long long cnt = 0;
     for (int episode=0; episode<episodes; ++episode) {
         cout << "epsode = " << episode << endl;
         vector<Point> state = env.reset();
         show_state(state);
         agent.reset();
+        long long cnt = 0;
         while (true) {
             ++cnt;
-            cout << cnt << endl;
-            // if (cnt % 10000 == 0) cout << cnt << endl;
+            if (cnt % (long long)100000 == 0) cout << cnt << endl;
             pair<int, int> action = agent.get_action(state);
-            cout << "get action" << endl;
+            // cout << "get action" << endl;
             tuple<vector<Point>, double, bool>  step = env.step(action);
-            cout << "step" << endl;
+            // cout << "step" << endl;
             vector<Point> next_state = get<0>(step);
             double reward = get<1>(step);
             bool done = get<2>(step);
-
-            agent.add(state, action, reward);
-            cout << "add" << endl;
+            if (state != next_state) agent.add(next_state, action, reward);
+            // cout << "add" << endl;
             if (done) {
-                agent.update();
                 cout << "episode " << episode << " done" << endl;
+                cout << cnt << endl;
                 cout << agent.memory.size() << endl;
+                agent.update();
                 break;
             }
             state = next_state;
-            show_state(state);
+            // show_state(state);
         }
     }
     cout << "learn finished" << endl;
