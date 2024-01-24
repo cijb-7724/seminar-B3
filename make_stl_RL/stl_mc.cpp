@@ -82,6 +82,7 @@ map<pair<int, int>, double> greedy_probs(
             qs[i][j] = Q[state][{i, j}];
         }
     }
+    
     double max_elm = -1e6;
     for (int i=0; i<action_size_vertex; ++i) {
         max_elm = max(max_elm, *max_element(qs[i].begin(), qs[i].end()));
