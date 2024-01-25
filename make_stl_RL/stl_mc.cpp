@@ -70,8 +70,8 @@ void outputTextFile2d(vvd &v, string s) {
     }
 }
 map<pair<int, int>, double> greedy_probs(
-    map<vector<Point>, map<pair<int, int>, double>> Q,
-    vector<Point> state,
+    map<vector<Point>, map<pair<int, int>, double>> &Q,
+    vector<Point> &state,
     double epsilon=0,
     int action_size_vertex=8,
     int action_size_direction=6
@@ -82,7 +82,7 @@ map<pair<int, int>, double> greedy_probs(
             qs[i][j] = Q[state][{i, j}];
         }
     }
-    
+
     double max_elm = -1e6;
     for (int i=0; i<action_size_vertex; ++i) {
         max_elm = max(max_elm, *max_element(qs[i].begin(), qs[i].end()));
@@ -359,8 +359,8 @@ void McAgent::update(void) {
         ++cnt;
         if (cnt % 10000 == 0) cout << cnt << endl;
         auto start_time = std::chrono::high_resolution_clock::now();
-        const vector<Point>& state = get<0>(data);
-        const pair<int, int>& action = get<1>(data);
+        vector<Point> &state = get<0>(data);
+        const pair<int, int> &action = get<1>(data);
         const double& reward = get<2>(data);
         G = this->gamma * G + reward;
         this->Q[state][action] += (G - this->Q[state][action]) * this->alpha;
