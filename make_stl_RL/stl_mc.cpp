@@ -69,42 +69,88 @@ void outputTextFile2d(vvd &v, string s) {
         outputFile << endl;
     }
 }
+// map<pair<int, int>, double> greedy_probs(
+//     map<vector<Point>, map<pair<int, int>, double>> &Q,
+//     vector<Point> &state,
+//     double epsilon=0,
+//     int action_size_vertex=8,
+//     int action_size_direction=6
+//     ) {
+//     vvd qs(action_size_vertex, vd(action_size_direction));
+//     for (int i=0; i<action_size_vertex; ++i) {
+//         for (int j=0; j<action_size_direction; ++j) {
+//             qs[i][j] = Q[state][{i, j}];
+//         }
+//     }
+
+//     double max_elm = -1e6;
+//     for (int i=0; i<action_size_vertex; ++i) {
+//         max_elm = max(max_elm, *max_element(qs[i].begin(), qs[i].end()));
+//     }
+    
+//     pair<int, int> max_action;
+//     for (int i=0; i<action_size_vertex; ++i) {
+//         for (int j=0; j<action_size_direction; ++j) {
+//             if (qs[i][j] == max_elm) {
+//                 max_action = {i, j};
+//             }
+//         }
+//     }
+    
+//     double base_prob = epsilon / (action_size_vertex * action_size_direction);
+//     map<pair<int, int>, double> action_probs;
+//     for (int i=0; i<action_size_vertex; ++i) {
+//         for (int j=0; j<action_size_direction; ++j) {
+//             action_probs[{i, j}] = base_prob;
+//         }
+//     }
+//     action_probs[max_action] += 1-epsilon;
+//     return action_probs;
+// }
+
 map<pair<int, int>, double> greedy_probs(
-    map<vector<Point>, map<pair<int, int>, double>> &Q,
-    vector<Point> &state,
-    double epsilon=0,
-    int action_size_vertex=8,
-    int action_size_direction=6
+    const map<vector<Point>, map<pair<int, int>, double>> &Q,
+    const vector<Point> &state,
+    double epsilon = 0,
+    int action_size_vertex = 8,
+    int action_size_direction = 6
     ) {
-    vvd qs(action_size_vertex, vd(action_size_direction));
-    for (int i=0; i<action_size_vertex; ++i) {
-        for (int j=0; j<action_size_direction; ++j) {
-            qs[i][j] = Q[state][{i, j}];
+    // 初期化の一部を変更
+    vector<vector<double>> qs(action_size_vertex, vector<double>(action_size_direction, 0.0));
+
+    // ループ内の不要なマップアクセスを削減
+    auto stateQ = Q.at(state);
+    for (int i = 0; i < action_size_vertex; ++i) {
+        for (int j = 0; j < action_size_direction; ++j) {
+            qs[i][j] = stateQ[{i, j}];
         }
     }
 
+    // 最大値を計算するときにループ内の関数呼び出しを減らす
     double max_elm = -1e6;
-    for (int i=0; i<action_size_vertex; ++i) {
-        max_elm = max(max_elm, *max_element(qs[i].begin(), qs[i].end()));
+    for (const auto& row : qs) {
+        max_elm = max(max_elm, *max_element(row.begin(), row.end()));
     }
-    
+
     pair<int, int> max_action;
-    for (int i=0; i<action_size_vertex; ++i) {
-        for (int j=0; j<action_size_direction; ++j) {
-            if (qs[i][j] == max_elm) {
-                max_action = {i, j};
-            }
+
+    // max_actionを見つけるときにループ内の条件判定を変更
+    for (int i = 0; i < action_size_vertex; ++i) {
+        auto max_j = max_element(qs[i].begin(), qs[i].end());
+        if (*max_j == max_elm) {
+            max_action = {i, static_cast<int>(distance(qs[i].begin(), max_j))};
         }
     }
-    
+
+    // ループ内の不要な初期化を削減
     double base_prob = epsilon / (action_size_vertex * action_size_direction);
     map<pair<int, int>, double> action_probs;
-    for (int i=0; i<action_size_vertex; ++i) {
-        for (int j=0; j<action_size_direction; ++j) {
+    for (int i = 0; i < action_size_vertex; ++i) {
+        for (int j = 0; j < action_size_direction; ++j) {
             action_probs[{i, j}] = base_prob;
         }
     }
-    action_probs[max_action] += 1-epsilon;
+    action_probs[max_action] += 1 - epsilon;
     return action_probs;
 }
 
@@ -357,7 +403,7 @@ void McAgent::update(void) {
     long long cnt = 0;
     for (auto data: mem) {
         ++cnt;
-        if (cnt % 10000 == 0) cout << cnt << endl;
+        if (cnt % 1000000 == 0) cout << cnt << endl;
         auto start_time = std::chrono::high_resolution_clock::now();
         vector<Point> &state = get<0>(data);
         const pair<int, int> &action = get<1>(data);
@@ -366,23 +412,24 @@ void McAgent::update(void) {
         this->Q[state][action] += (G - this->Q[state][action]) * this->alpha;
         auto end_time = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
-        cout << "G caluculate time: " << duration.count() << " microseconds" << endl;
+        // cout << "G caluculate time: " << duration.count() << " microseconds" << endl;
 
-        start_time = std::chrono::high_resolution_clock::now();
+        // start_time = std::chrono::high_resolution_clock::now();
         map<pair<int, int>, double> action_prob = greedy_probs(this->Q, state, this->epsilon);
-        end_time = std::chrono::high_resolution_clock::now();
-        duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
-        cout << "greedy_probs caluculate time: " << duration.count() << " microseconds" << endl;
+        // end_time = std::chrono::high_resolution_clock::now();
+        // duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
+        // cout << "greedy_probs caluculate time: " << duration.count() << " microseconds" << endl;
 
-        start_time = std::chrono::high_resolution_clock::now();
-        for (int i=0; i<action_size_vertex; ++i) {
-            for (int j=0; j<action_size_direction; ++j) {
-                this->pi[state][{i, j}] = action_prob[{i, j}];
-            }
-        }
-        end_time = std::chrono::high_resolution_clock::now();
-        duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
-        cout << "pi update caluculate time: " << duration.count() << " microseconds" << endl;
+        // start_time = std::chrono::high_resolution_clock::now();
+        // for (int i=0; i<action_size_vertex; ++i) {
+        //     for (int j=0; j<action_size_direction; ++j) {
+        //         this->pi[state][{i, j}] = action_prob[{i, j}];
+        //     }
+        // }
+        pi[state] = action_prob;
+        // end_time = std::chrono::high_resolution_clock::now();
+        // duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
+        // cout << "pi update caluculate time: " << duration.count() << " microseconds" << endl;
         
     }
 }
@@ -406,7 +453,7 @@ int main() {
         long long cnt = 0;
         while (true) {
             ++cnt;
-            if (cnt % (long long)100000 == 0) cout << cnt << endl;
+            if (cnt % 1000000 == 0) cout << cnt << endl;
             pair<int, int> action = agent.get_action(state);
             // cout << "get action" << endl;
             tuple<vector<Point>, double, bool>  step = env.step(action);
@@ -414,13 +461,13 @@ int main() {
             vector<Point> next_state = get<0>(step);
             double reward = get<1>(step);
             bool done = get<2>(step);
-            if (state != next_state) agent.add(next_state, action, reward);
+            if (state != next_state) agent.add(next_state, action, reward);//動いたときはmemoryに記録
             // cout << "add" << endl;
             if (done) {
-                cout << "episode " << episode << " done" << endl;
                 cout << cnt << endl;
                 cout << agent.memory.size() << endl;
                 agent.update();
+                cout << "episode " << episode << " done" << endl;
                 break;
             }
             state = next_state;
